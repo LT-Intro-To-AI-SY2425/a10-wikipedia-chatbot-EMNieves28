@@ -1,6 +1,6 @@
 import re, string, calendar
 from wikipedia import WikipediaPage
-import wikipedia
+import wikipedia 
 from bs4 import BeautifulSoup
 from nltk import word_tokenize, pos_tag, ne_chunk
 from nltk.tree import Tree
@@ -68,7 +68,7 @@ def get_match(
     Returns:
         text that matches
     """
-    p = re.compile(pattern, re.DOTALL | re.IGNORECASE)
+    p = re.compile(pattern, re.DOTALL)
     match = p.search(text)
 
     if not match:
@@ -111,6 +111,62 @@ def get_birth_date(name: str) -> str:
 
     return match.group("birth")
 
+def get_headquarter_name(name: str) -> str:
+    """Gets headquarter location based on company name
+
+    Args:
+        name-name of the company
+
+    Returns:
+        the location that the headquarters is in
+    """
+    infobox_text = clean_text(get_first_infobox_text(get_page_html(name)))
+    pattern = r"Headquarters(?P<location>\w+\S\s\w+)"
+    error_text = (
+        "No headquarters location found in the infobox."
+    )
+    match = get_match(infobox_text, pattern, error_text)
+
+    return match.group("location")
+
+def get_release_date(name: str) -> str:
+    """Gets release date of the given movie
+
+    Args:
+        name - name of the movie
+
+    Returns:
+        release date of the given movie
+    """
+    infobox_text = clean_text(get_first_infobox_text(get_page_html(name)))
+    pattern =r"(?:Release\sdate*)(?P<Release>\d{4}-\d{2}-\d{2})"
+    error_text = (
+        "Page infobox has no release date information "
+    )
+    match = get_match(infobox_text, pattern, error_text)
+
+    return match.group("Release")
+
+def get_death_date(name: str) -> str:
+    """Gets the date of death of the given person
+    
+    Args:
+        name - name of the person
+        
+    Returns:
+        date of death of the given person
+    """
+
+    infobox_text = clean_text(get_first_infobox_text(get_page_html(name)))
+    pattern = r"(?Died\D*)(?P<death>\d{4}-\d{2}-\d{2})"
+
+    error_text = (
+        "Page infobox has no death information (at least none in xxxx-xx-xx format)"
+    )
+    match = get_match(infobox_text, pattern, error_text)
+
+    return match.group("death")
+
 
 # below are a set of actions. Each takes a list argument and returns a list of answers
 # according to the action and the argument. It is important that each function returns a
@@ -140,6 +196,40 @@ def polar_radius(matches: List[str]) -> List[str]:
     """
     return [get_polar_radius(matches[0])]
 
+def headquarter_location(matches: List[str]) -> List[str]:
+    """Returns headquarter location of named company in matches
+
+    Args:
+        matches - match from pattern of company name to find headquarter location of
+
+    Returns:
+        location of headquarters
+    """
+    return [get_headquarter_name(" ".join(matches))]
+
+def release_date(matches: List[str]) -> List[str]:
+    """Returns release date of named movie in matches
+
+    Args:
+        matches - match from pattern of movies' name to find release date of
+
+    Returns:
+        release date of named movie
+    """
+    return [get_release_date(" ".join(matches))]
+
+def death_date(matches: List[str]) -> List[str]:
+    """Returns date of death of the named person in matches
+
+    Args:
+        matches - match from pattern of person's name to find date of death
+    
+    Returns: 
+        date of death of named person
+    """
+    return [get_death_date(" ".join(matches))]
+
+
 
 # dummy argument is ignored and doesn't matter
 def bye_action(dummy: List[str]) -> None:
@@ -156,6 +246,8 @@ Action = Callable[[List[str]], List[Any]]
 pa_list: List[Tuple[Pattern, Action]] = [
     ("when was % born".split(), birth_date),
     ("what is the polar radius of %".split(), polar_radius),
+    ("where is the headquarters for % located".split(), headquarter_location),
+    ("when was % released".split(), release_date),
     (["bye"], bye_action),
 ]
 
